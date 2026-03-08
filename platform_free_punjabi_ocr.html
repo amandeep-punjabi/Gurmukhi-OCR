@@ -367,6 +367,7 @@ code { background: #edf2e4; border-radius: 6px; padding: 0.1rem 0.35rem; }
         <p class="step-note" style="margin-top:0;">Share model packs with friends, then import packs here to build one unified OCR memory.</p>
         <div class="actions" style="margin-top:0.5rem;">
           <button id="exportPackBtn" class="secondary" type="button">Export Learning Pack</button>
+          <button id="submitPackBtn" class="secondary" type="button">Submit Pack to GitHub</button>
         </div>
         <label for="importPackFile">Import learning pack (.json)</label>
         <input id="importPackFile" type="file" accept=".json,application/json" />
@@ -480,6 +481,7 @@ code { background: #edf2e4; border-radius: 6px; padding: 0.1rem 0.35rem; }
     appendDocxBtn: document.getElementById("appendDocxBtn"),
     existingDocx: document.getElementById("existingDocx"),
     exportPackBtn: document.getElementById("exportPackBtn"),
+    submitPackBtn: document.getElementById("submitPackBtn"),
     importPackFile: document.getElementById("importPackFile"),
     importPackBtn: document.getElementById("importPackBtn"),
     status: document.getElementById("status"),
@@ -2193,6 +2195,37 @@ code { background: #edf2e4; border-radius: 6px; padding: 0.1rem 0.35rem; }
     flashButton(els.exportPackBtn, "btn-ok", "Exported");
   }
 
+  async function submitLearningPack() {
+    try {
+      flashButton(els.submitPackBtn, "btn-busy", "Submitting...");
+      const pack = buildLearningPack();
+      const resp = await fetch("/submit-pack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pack })
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data.ok) {
+        const msg = data.error || `Submit failed (HTTP ${resp.status})`;
+        setStatus(`Submit failed: ${msg}`);
+        flashButton(els.submitPackBtn, "btn-warn", "Failed");
+        return;
+      }
+      if (data.github_uploaded) {
+        const where = data.github_path ? ` -> ${data.github_path}` : "";
+        setStatus(`Submitted learning pack to GitHub${where}.`);
+        flashButton(els.submitPackBtn, "btn-ok", "Submitted");
+      } else {
+        const note = data.note || "Saved locally only.";
+        setStatus(`Submit partially complete: ${note}`);
+        flashButton(els.submitPackBtn, "btn-warn", "Local Only");
+      }
+    } catch (err) {
+      setStatus(`Submit failed: ${err.message}`);
+      flashButton(els.submitPackBtn, "btn-warn", "Failed");
+    }
+  }
+
   async function importLearningPack() {
     const file = els.importPackFile.files && els.importPackFile.files[0];
     if (!file) {
@@ -2308,6 +2341,7 @@ code { background: #edf2e4; border-radius: 6px; padding: 0.1rem 0.35rem; }
   els.saveTxtBtn.addEventListener("click", saveTxt);
   els.appendDocxBtn.addEventListener("click", appendToExistingDocx);
   els.exportPackBtn.addEventListener("click", exportLearningPack);
+  els.submitPackBtn.addEventListener("click", submitLearningPack);
   els.importPackBtn.addEventListener("click", importLearningPack);
   if (els.fontDownBtn) els.fontDownBtn.addEventListener("click", () => stepEditorFont(-2));
   if (els.fontUpBtn) els.fontUpBtn.addEventListener("click", () => stepEditorFont(2));

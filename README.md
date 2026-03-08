@@ -33,6 +33,8 @@ Pipeline loops:
 - Save New DOCX
 - Append to Existing DOCX
 - Consent-gated dependency download in browser
+- Export/import learning packs for collaboration
+- One-click `Submit Pack to GitHub` (via Go backend endpoint)
 
 ## Platform-free dependency policy
 
@@ -68,6 +70,28 @@ go run .
 ```
 
 Open: `http://127.0.0.1:8080`
+
+## One-click GitHub pack submission setup
+
+`Submit Pack to GitHub` uses backend endpoint `/submit-pack`.  
+It always saves a local copy under `app_data/learning_packs/`, and uploads to GitHub if token is configured.
+
+Set environment variables before `go run .`:
+
+```bash
+export GITHUB_TOKEN="<your_fine_grained_pat>"
+export GITHUB_OWNER="amandeep-punjabi"
+export GITHUB_REPO="Gurmukhi-OCR"
+export GITHUB_BRANCH="main"
+export GITHUB_PACK_PATH="contributions/learning_packs"
+```
+
+Optional committer identity:
+
+```bash
+export GITHUB_COMMITTER_NAME="Punjabi OCR Bot"
+export GITHUB_COMMITTER_EMAIL="bot@example.com"
+```
 
 ## Build binary
 
