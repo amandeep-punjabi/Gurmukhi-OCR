@@ -1,0 +1,21 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Runtime / generated data
+app_data/
+temp_training/
+downloaded_fonts/
+*.log
+*.tmp
+
+# Local exports
+*.local.json
+punjabi_ocr_learning_pack_*.json

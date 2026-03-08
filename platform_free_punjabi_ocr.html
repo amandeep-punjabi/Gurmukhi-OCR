@@ -1,0 +1,2324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Punjabi Gurmukhi OCR</title>
+<style>
+:root {
+  --bg: #f5f7ef;
+  --card: #fff;
+  --ink: #1f241a;
+  --line: #d8dfcd;
+  --muted: #64715f;
+  --accent: #27553f;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Palatino Linotype", "Noto Sans Gurmukhi", serif;
+  color: var(--ink);
+  background: radial-gradient(circle at top left, #eaf2de 0%, var(--bg) 60%);
+}
+main { max-width: none; width: 100%; margin: 1rem 0; padding: 0.8rem 1rem; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.8rem;
+}
+.step-title {
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+}
+.step-note {
+  color: var(--muted);
+  margin: 0.15rem 0 0.6rem;
+  font-size: 0.93rem;
+}
+.grid { display: grid; gap: 0.8rem; }
+@media (min-width: 980px) { .grid-2 { grid-template-columns: 420px minmax(0, 1fr); } }
+.settings-grid {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 760px) {
+  .settings-grid {
+    grid-template-columns: 148px minmax(0, 1fr);
+    align-items: end;
+  }
+}
+.settings-grid label {
+  white-space: nowrap;
+}
+.settings-grid select,
+.settings-grid input {
+  white-space: nowrap;
+}
+.setting-loop { grid-column: 1; grid-row: 1; }
+.setting-lang { grid-column: 2; grid-row: 1; }
+.setting-symbols { grid-column: 1; grid-row: 2; margin-right: -18px; }
+.setting-preprocess { grid-column: 2; grid-row: 2; margin-left: 18px; }
+.setting-preprocess select {
+  font-size: 0.95em;
+  padding-left: 0.5rem;
+  padding-right: 1.8rem;
+}
+label { display: block; font-weight: 700; margin-bottom: 0.25rem; }
+input, select, textarea, button { font: inherit; }
+input[type=file], input[type=number], select, textarea {
+  width: 100%;
+  border: 1px solid #cfd8c4;
+  border-radius: 9px;
+  padding: 0.58rem;
+}
+textarea { min-height: 430px; }
+button {
+  border: none;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  padding: 0.62rem 0.9rem;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+button.secondary { background: #536b60; }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+button.btn-busy { background: #6f7f76; }
+button.btn-ok { background: #2f6f43; }
+button.btn-warn { background: #8a5b1f; }
+button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 0;
+  background: rgba(255, 255, 255, 0.8);
+  transition: width 180ms linear;
+}
+button.btn-busy::after {
+  width: 70%;
+  animation: btn-progress 700ms linear infinite;
+}
+button.btn-ok::after {
+  width: 100%;
+  animation: none;
+}
+button.btn-warn::after {
+  width: 100%;
+  animation: none;
+  background: rgba(255, 245, 200, 0.9);
+}
+@keyframes btn-progress {
+  0% { width: 10%; }
+  100% { width: 100%; }
+}
+small, .muted { color: var(--muted); }
+.status {
+  border: 1px dashed #ccd6bf;
+  border-radius: 8px;
+  background: #fafcf6;
+  padding: 0.55rem 0.7rem;
+  min-height: 2.2rem;
+}
+.progress-shell {
+  border: 1px solid #ccd6bf;
+  border-radius: 10px;
+  background: #f6faef;
+  padding: 0.55rem 0.7rem;
+  margin-bottom: 0.6rem;
+}
+.progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  margin-bottom: 0.35rem;
+}
+.progress-stage {
+  font-weight: 700;
+}
+.progress-pct {
+  color: var(--muted);
+  font-weight: 700;
+}
+.progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: #dfe7d2;
+  overflow: hidden;
+  margin-bottom: 0.35rem;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4c6f60, #2d5f47);
+  transition: width 180ms linear;
+}
+.progress-detail {
+  font-size: 0.9rem;
+  color: var(--muted);
+  min-height: 1.1rem;
+}
+.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.table-wrap {
+  border: 1px solid #dbe3d0;
+  border-radius: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+th, td { border-bottom: 1px solid #e7ebdf; text-align: left; padding: 0.32rem 0.45rem; }
+.mini-input {
+  width: 100%;
+  border: 1px solid #cfd8c4;
+  border-radius: 7px;
+  padding: 0.28rem 0.38rem;
+}
+#reviewBody tr[data-review-idx] td:nth-child(3) {
+  font-size: 1.6rem;
+  line-height: 1.25;
+}
+.review-input {
+  font-size: 1.6rem;
+  line-height: 1.25;
+}
+.review-suggest {
+  width: 100%;
+  margin-top: 0.2rem;
+  font-size: 1rem;
+}
+.snippet-img {
+  width: 88px;
+  height: 34px;
+  object-fit: contain;
+  border: 1px solid #d3dcc7;
+  border-radius: 6px;
+  background: #fff;
+}
+.review-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.review-actions button {
+  width: auto;
+  padding: 0.38rem 0.45rem;
+  font-size: 0.85rem;
+}
+.review-action-row td {
+  background: #fafcf6;
+  padding-top: 0.28rem;
+  padding-bottom: 0.4rem;
+}
+code { background: #edf2e4; border-radius: 6px; padding: 0.1rem 0.35rem; }
+.workflow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.workflow span {
+  border: 1px solid #d6decb;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.85rem;
+  background: #f7faef;
+}
+.editor-pane {
+  position: sticky;
+  top: 0.8rem;
+  align-self: start;
+  width: 100%;
+}
+.editor-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.editor-toolbar button {
+  flex: 1 1 160px;
+}
+.editor-font-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.editor-font-controls button {
+  flex: 0 0 auto;
+  min-width: 46px;
+  padding: 0.4rem 0.5rem;
+}
+.editor-font-size {
+  min-width: 56px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--muted);
+}
+#outputText {
+  width: 100%;
+  min-height: calc(100vh - 290px);
+  line-height: 1.45;
+}
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(20, 30, 20, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal {
+  width: 100%; max-width: 650px;
+  background: #fff;
+  border: 1px solid #d7decc;
+  border-radius: 12px;
+  padding: 1rem;
+}
+.file-list {
+  margin: 0.4rem 0 0;
+  padding-left: 1rem;
+  max-height: 110px;
+  overflow: auto;
+}
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <h1>Punjabi Gurmukhi OCR (Images + PDFs)</h1>
+    <p>Simple flow: upload files, run OCR, correct text, then save and train.</p>
+    <div class="workflow">
+      <span>1. Upload</span>
+      <span>2. Start OCR</span>
+      <span>3. Review / Correct</span>
+      <span>4. Save + Learn</span>
+    </div>
+  </div>
+
+  <div class="card grid grid-2">
+    <div>
+      <p class="step-title">Step 1: Choose Files</p>
+      <p class="step-note">Upload Punjabi images or PDFs to read.</p>
+      <label for="sourceFiles">Choose images or PDFs</label>
+      <input id="sourceFiles" type="file" accept="image/*,.pdf,application/pdf" multiple />
+      <ul id="fileList" class="file-list"></ul>
+
+      <p class="step-title" style="margin-top:0.7rem;">Step 2: OCR Settings</p>
+      <p class="step-note">Use default settings first for easiest results.</p>
+      <div class="settings-grid" style="margin-top:0.6rem;">
+        <div class="setting-loop">
+          <label for="loops">Loop count (1-5)</label>
+          <input id="loops" type="number" min="1" max="5" value="2" />
+        </div>
+        <div class="setting-lang">
+          <label for="lang">OCR language</label>
+          <select id="lang">
+            <option value="pan+eng" selected>Punjabi + English (recommended)</option>
+            <option value="pan">Punjabi (pan)</option>
+            <option value="pan+hin+eng">Punjabi + Hindi + English</option>
+          </select>
+        </div>
+        <div class="setting-symbols">
+          <label for="symbolMode">Symbols handling</label>
+          <select id="symbolMode">
+            <option value="keep" selected>Try keep symbols</option>
+            <option value="skip">Skip non-Gurmukhi symbols</option>
+          </select>
+        </div>
+        <div class="setting-preprocess">
+          <label for="preprocessMode">Preprocessing</label>
+          <select id="preprocessMode">
+            <option value="best" selected>Best of variants (recommended)</option>
+            <option value="original">Original</option>
+            <option value="otsu">Binary Otsu</option>
+            <option value="denoise">Denoise</option>
+            <option value="sharpen">Sharpen</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="step-title" style="margin-top:0.7rem;">Step 3: Run OCR</p>
+      <div class="actions" style="margin-top:0.8rem;">
+        <button id="runBtn" type="button">Start OCR</button>
+        <button id="stopBtn" class="secondary" type="button" disabled>Stop</button>
+      </div>
+
+      <div class="card" style="padding:0.7rem; margin-top:0.8rem;">
+        <p class="step-title">Optional: Append to Existing DOCX</p>
+        <label for="existingDocx">Append to existing DOCX</label>
+        <input id="existingDocx" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+        <div class="actions" style="margin-top:0.6rem;">
+          <button id="appendDocxBtn" class="secondary" type="button" disabled>Append to DOCX & Save</button>
+        </div>
+        <small>Browser security does not allow overwriting a file in place, so appended output is downloaded as a new DOCX.</small>
+      </div>
+
+      <div class="card" style="padding:0.7rem; margin-top:0.8rem;">
+        <p class="step-title">Share & Merge Learning</p>
+        <p class="step-note" style="margin-top:0;">Share model packs with friends, then import packs here to build one unified OCR memory.</p>
+        <div class="actions" style="margin-top:0.5rem;">
+          <button id="exportPackBtn" class="secondary" type="button">Export Learning Pack</button>
+        </div>
+        <label for="importPackFile">Import learning pack (.json)</label>
+        <input id="importPackFile" type="file" accept=".json,application/json" />
+        <div class="actions" style="margin-top:0.6rem;">
+          <button id="importPackBtn" class="secondary" type="button">Import & Merge Pack</button>
+        </div>
+      </div>
+
+      <h3 style="margin-top:0.9rem;">Intermediate Review Stage</h3>
+      <p class="step-note">Quickly approve model output or apply your correction row-by-row.</p>
+      <div class="actions" style="margin-bottom:0.4rem;">
+        <label for="reviewMode" style="margin:0;">Review unit</label>
+        <select id="reviewMode" style="max-width:180px;">
+          <option value="word" selected>Word by word</option>
+          <option value="line">Line by line</option>
+        </select>
+        <button id="applyReviewBtn" class="secondary" type="button" disabled>Use Review In Editor</button>
+        <button id="trainReviewBtn" class="secondary" type="button" disabled>Learn From Review Decisions</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Snippet</th><th>Model Read</th><th>My Correction</th></tr>
+          </thead>
+          <tbody id="reviewBody"></tbody>
+        </table>
+      </div>
+
+      <details style="margin-top:0.8rem;">
+        <summary><b>Advanced: View Segmentation (word boxes)</b></summary>
+        <div class="table-wrap" style="margin-top:0.5rem;">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Word</th><th>Left</th><th>Top</th><th>Width</th><th>Height</th><th>Conf</th></tr>
+            </thead>
+            <tbody id="segBody"></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+
+    <div class="editor-pane">
+      <div class="progress-shell">
+        <div class="progress-head">
+          <span id="progressStage" class="progress-stage">Idle</span>
+          <span id="progressPct" class="progress-pct">0%</span>
+        </div>
+        <div class="progress-track"><div id="progressFill" class="progress-fill"></div></div>
+        <div id="status" class="progress-detail">Select files and click Start OCR.</div>
+      </div>
+      <p class="step-title">Step 4: Final Text Editor</p>
+      <p class="step-note">Right side is dedicated to correction text. Use basic actions below.</p>
+      <div class="editor-toolbar">
+        <button id="trainPaneBtn" class="secondary" type="button">Learn From Edited Text</button>
+        <button id="saveNewDocxBtn" type="button" disabled>Save DOCX</button>
+        <button id="saveTxtBtn" type="button" disabled>Save TXT</button>
+        <div class="editor-font-controls" aria-label="Editor font size controls">
+          <button id="fontDownBtn" class="secondary" type="button" title="Decrease text size">A-</button>
+          <span id="editorFontSize" class="editor-font-size">18px</span>
+          <button id="fontUpBtn" class="secondary" type="button" title="Increase text size">A+</button>
+        </div>
+      </div>
+      <label for="outputText">OCR Output (editable)</label>
+      <textarea id="outputText" placeholder="OCR text will appear here. Edit mistakes before saving."></textarea>
+      <small>When you save, your corrected text is used to train the correction model for future runs.</small>
+    </div>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="consentModal">
+  <div class="modal">
+    <h2>Consent Required</h2>
+    <p>This app is platform-free and runs in browser, but needs runtime downloads.</p>
+    <p>Download list:</p>
+    <p>- <code>tesseract.js</code> OCR runtime + Punjabi language data</p>
+    <p>- <code>pdf.js</code> for PDF page rendering</p>
+    <p>- <code>jszip</code> for DOCX read/write</p>
+    <p>Do you consent to download these dependencies now?</p>
+    <div class="actions">
+      <button id="consentYes" type="button">I Consent</button>
+      <button id="consentNo" class="secondary" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "punjabi_ocr_model_v2";
+  const EDITOR_FONT_KEY = "punjabi_ocr_editor_font_px";
+  const GURMUKHI_RE = /[\u0A00-\u0A7F]+/g;
+  const SYMBOL_LABELS = new Set(["☬", "•"]);
+  const TEMPLATE_SIZE = 20;
+  const TEMPLATE_MAX_PER_LABEL = 72;
+  const TEMPLATE_MIN_PIXELS = 18;
+  const TEMPLATE_MATCH_THRESHOLD = 0.86;
+  const POPCOUNT_NIBBLE = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
+
+  const els = {
+    sourceFiles: document.getElementById("sourceFiles"),
+    fileList: document.getElementById("fileList"),
+    loops: document.getElementById("loops"),
+    lang: document.getElementById("lang"),
+    symbolMode: document.getElementById("symbolMode"),
+    preprocessMode: document.getElementById("preprocessMode"),
+    runBtn: document.getElementById("runBtn"),
+    stopBtn: document.getElementById("stopBtn"),
+    saveNewDocxBtn: document.getElementById("saveNewDocxBtn"),
+    saveTxtBtn: document.getElementById("saveTxtBtn"),
+    appendDocxBtn: document.getElementById("appendDocxBtn"),
+    existingDocx: document.getElementById("existingDocx"),
+    exportPackBtn: document.getElementById("exportPackBtn"),
+    importPackFile: document.getElementById("importPackFile"),
+    importPackBtn: document.getElementById("importPackBtn"),
+    status: document.getElementById("status"),
+    progressStage: document.getElementById("progressStage"),
+    progressPct: document.getElementById("progressPct"),
+    progressFill: document.getElementById("progressFill"),
+    outputText: document.getElementById("outputText"),
+    segBody: document.getElementById("segBody"),
+    reviewMode: document.getElementById("reviewMode"),
+    reviewBody: document.getElementById("reviewBody"),
+    applyReviewBtn: document.getElementById("applyReviewBtn"),
+    trainReviewBtn: document.getElementById("trainReviewBtn"),
+    trainPaneBtn: document.getElementById("trainPaneBtn"),
+    fontDownBtn: document.getElementById("fontDownBtn"),
+    fontUpBtn: document.getElementById("fontUpBtn"),
+    editorFontSize: document.getElementById("editorFontSize"),
+    consentModal: document.getElementById("consentModal"),
+    consentYes: document.getElementById("consentYes"),
+    consentNo: document.getElementById("consentNo")
+  };
+
+  let depsLoaded = false;
+  let latestRawText = "";
+  let latestWords = [];
+  let latestReviewItems = [];
+  let lastTrainedSignature = "";
+  let activeRun = null;
+  let latestDocFingerprint = "";
+  let lastRunDocFingerprint = "";
+
+  const model = {
+    corrections: {},
+    vocabCounts: {},
+    phraseCorrections: {},
+    documentCorrections: {},
+    templates: {},
+    correctionVotes: {}
+  };
+
+  function setStatus(msg) {
+    els.status.textContent = msg;
+  }
+
+  function setProgress(stage, percent, detail) {
+    const p = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+    if (els.progressStage) els.progressStage.textContent = stage || "Idle";
+    if (els.progressPct) els.progressPct.textContent = `${p}%`;
+    if (els.progressFill) els.progressFill.style.width = `${p}%`;
+    if (typeof detail === "string" && detail.length) setStatus(detail);
+  }
+
+  function flashButton(btn, mode, label) {
+    if (!btn) return;
+    if (btn._flashTimer) {
+      clearTimeout(btn._flashTimer);
+      btn._flashTimer = null;
+    }
+    const old = btn.dataset.oldLabel || btn.textContent;
+    if (!btn.dataset.oldLabel) btn.dataset.oldLabel = old;
+    if (!btn.dataset.oldWidth) btn.dataset.oldWidth = String(btn.offsetWidth || 0);
+    const w = Number(btn.dataset.oldWidth || "0");
+    if (w > 0) {
+      btn.style.width = `${w}px`;
+      btn.style.minWidth = `${w}px`;
+    }
+    btn.classList.remove("btn-busy", "btn-ok", "btn-warn");
+    if (mode) btn.classList.add(mode);
+    if (label) btn.textContent = label;
+    btn._flashTimer = window.setTimeout(() => {
+      btn.classList.remove("btn-busy", "btn-ok", "btn-warn");
+      btn.textContent = btn.dataset.oldLabel || old;
+      btn.style.width = "";
+      btn.style.minWidth = "";
+      delete btn.dataset.oldLabel;
+      delete btn.dataset.oldWidth;
+      btn._flashTimer = null;
+    }, 900);
+  }
+
+  function clampEditorFontSize(px) {
+    const n = Number(px);
+    if (!Number.isFinite(n)) return 18;
+    return Math.max(14, Math.min(40, Math.round(n)));
+  }
+
+  function applyEditorFontSize(px, persist = true) {
+    const size = clampEditorFontSize(px);
+    els.outputText.style.fontSize = `${size}px`;
+    if (els.editorFontSize) {
+      els.editorFontSize.textContent = `${size}px`;
+    }
+    if (persist) {
+      localStorage.setItem(EDITOR_FONT_KEY, String(size));
+    }
+    if (els.fontDownBtn) els.fontDownBtn.disabled = size <= 14;
+    if (els.fontUpBtn) els.fontUpBtn.disabled = size >= 40;
+  }
+
+  function stepEditorFont(delta) {
+    const current = clampEditorFontSize(parseFloat(getComputedStyle(els.outputText).fontSize || "18"));
+    applyEditorFontSize(current + delta, true);
+  }
+
+  function initEditorFontSize() {
+    const saved = Number.parseInt(localStorage.getItem(EDITOR_FONT_KEY) || "", 10);
+    if (Number.isFinite(saved)) {
+      applyEditorFontSize(saved, false);
+      return;
+    }
+    const current = parseFloat(getComputedStyle(els.outputText).fontSize || "18");
+    applyEditorFontSize(current, false);
+  }
+
+  function tokenize(text) {
+    return text.match(GURMUKHI_RE) || [];
+  }
+
+  function saveModel() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(model));
+  }
+
+  function addCorrectionVote(wrongToken, rightToken, count = 1) {
+    const wrong = String(wrongToken || "").trim();
+    const right = String(rightToken || "").trim();
+    if (!wrong || !right || wrong === right) return;
+    if (!model.correctionVotes[wrong]) model.correctionVotes[wrong] = {};
+    const add = Math.max(1, Number.parseInt(String(count || 1), 10) || 1);
+    model.correctionVotes[wrong][right] = Number(model.correctionVotes[wrong][right] || 0) + add;
+  }
+
+  function mergeCorrectionValue(key, incomingVal) {
+    const k = String(key || "").trim();
+    const v = String(incomingVal || "").trim();
+    if (!k || !v) return false;
+    const existing = String(model.corrections[k] || "").trim();
+    if (!existing) {
+      model.corrections[k] = v;
+      return true;
+    }
+    if (existing === v) return false;
+    const existingScore = Number(model.vocabCounts[existing] || 0);
+    const incomingScore = Number(model.vocabCounts[v] || 0);
+    if (incomingScore > existingScore) {
+      model.corrections[k] = v;
+      return true;
+    }
+    return false;
+  }
+
+  function mergeLearningPackData(packData) {
+    const src = packData && packData.model ? packData.model : packData || {};
+    const inCorrections = src.corrections || {};
+    const inPhrases = src.phraseCorrections || {};
+    const inVocab = src.vocabCounts || {};
+    const inTemplates = src.templates || {};
+    const inVotes = src.correctionVotes || {};
+    const merged = { corrections: 0, phrases: 0, vocab: 0, templates: 0, votes: 0 };
+
+    for (const [token, count] of Object.entries(inVocab)) {
+      const add = Number(count || 0);
+      if (!Number.isFinite(add) || add <= 0) continue;
+      model.vocabCounts[token] = Number(model.vocabCounts[token] || 0) + add;
+      merged.vocab += 1;
+    }
+    for (const [k, v] of Object.entries(inCorrections)) {
+      if (mergeCorrectionValue(k, v)) merged.corrections += 1;
+    }
+    for (const [k, v] of Object.entries(inPhrases)) {
+      const key = String(k || "").trim();
+      const val = String(v || "").trim();
+      if (!key || !val) continue;
+      if (!model.phraseCorrections[key] || model.phraseCorrections[key] !== val) {
+        model.phraseCorrections[key] = val;
+        merged.phrases += 1;
+      }
+    }
+    for (const [label, sigs] of Object.entries(inTemplates)) {
+      const list = Array.isArray(sigs) ? sigs : [];
+      for (const sig of list) {
+        if (appendTemplateSignature(label, sig)) merged.templates += 1;
+      }
+    }
+    for (const [wrong, options] of Object.entries(inVotes)) {
+      const opts = options && typeof options === "object" ? options : {};
+      for (const [right, c] of Object.entries(opts)) {
+        const n = Number.parseInt(String(c || 0), 10);
+        if (!Number.isFinite(n) || n <= 0) continue;
+        addCorrectionVote(wrong, right, n);
+        merged.votes += 1;
+      }
+    }
+    saveModel();
+    return merged;
+  }
+
+  function buildLearningPack() {
+    return {
+      type: "punjabi_ocr_learning_pack",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      model: {
+        corrections: model.corrections,
+        vocabCounts: model.vocabCounts,
+        phraseCorrections: model.phraseCorrections,
+        templates: model.templates,
+        correctionVotes: model.correctionVotes
+      }
+    };
+  }
+
+  function loadModel() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.corrections && parsed.vocabCounts) {
+        model.corrections = parsed.corrections;
+        model.vocabCounts = parsed.vocabCounts;
+        model.phraseCorrections = parsed.phraseCorrections || {};
+        model.documentCorrections = parsed.documentCorrections || {};
+        model.correctionVotes = parsed.correctionVotes || {};
+        model.templates = {};
+        const incomingTemplates = parsed.templates || {};
+        for (const label of Object.keys(incomingTemplates)) {
+          if (!SYMBOL_LABELS.has(label)) continue;
+          const list = Array.isArray(incomingTemplates[label]) ? incomingTemplates[label] : [];
+          for (const sig of list) {
+            appendTemplateSignature(label, sig);
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  function hexFromBuffer(buf) {
+    const arr = new Uint8Array(buf);
+    let out = "";
+    for (let i = 0; i < arr.length; i += 1) {
+      out += arr[i].toString(16).padStart(2, "0");
+    }
+    return out;
+  }
+
+  async function digestFilePrefix(file, maxBytes = 131072) {
+    const blob = file.slice(0, Math.min(maxBytes, file.size));
+    const buf = await blob.arrayBuffer();
+    if (!window.crypto || !window.crypto.subtle) {
+      return `${file.name}|${file.size}|${file.lastModified}|${file.type}`;
+    }
+    const hash = await window.crypto.subtle.digest("SHA-256", buf);
+    return `${file.name}|${file.size}|${file.lastModified}|${file.type}|${hexFromBuffer(hash)}`;
+  }
+
+  async function fingerprintFilesAsync(files) {
+    const list = files || [];
+    const parts = [];
+    for (const f of list) {
+      parts.push(await digestFilePrefix(f));
+    }
+    parts.sort();
+    return parts.join("||");
+  }
+
+  function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function normalizeOutput(text) {
+    const normalized = String(text || "").normalize("NFC");
+    if ((els.symbolMode.value || "keep") === "skip") {
+      return normalized
+        .replace(/[^\u0A00-\u0A7F\s.,;:!?'"()\-\n]/g, "")
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+    return recoverPunjabiListBullets(recoverKhandaSymbol(recoverBullets(normalized)));
+  }
+
+  function recoverBullets(text) {
+    // Normalize common OCR bullet variants to a single bullet marker.
+    return String(text || "")
+      .split(/\r?\n/)
+      .map((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return line;
+        if (/^[•●◦▪▫]\s+/.test(trimmed)) return `• ${trimmed.slice(2).trimStart()}`;
+        if (/^[\-\*]\s+/.test(trimmed)) return `• ${trimmed.slice(2).trimStart()}`;
+        if (/^[oO0]\s+/.test(trimmed)) return `• ${trimmed.slice(2).trimStart()}`;
+        return line;
+      })
+      .join("\n");
+  }
+
+  function recoverKhandaSymbol(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    const cleaned = lines.map((line) => {
+      // Only force PTR->☬ when line is Punjabi context.
+      if (!/[\u0A00-\u0A7F]/.test(line)) return line;
+      let out = line;
+      // Normalize common OCR confusions for Khanda as standalone tokens.
+      out = out.replace(/\bP[T7][R2]\b/gi, "☬");
+      out = out.replace(/(^|[\s])(?:P|@|\$|®|4|੪)(?=[\s]|$)/g, "$1☬");
+      // Remove accidental duplicate symbols.
+      out = out.replace(/☬\s*☬/g, "☬");
+      return out;
+    });
+
+    // If first non-empty Punjabi heading starts/ends with symbol-like token, enforce ☬ framing.
+    const idx = cleaned.findIndex((ln) => /[\u0A00-\u0A7F]/.test(ln) && ln.trim().length > 8);
+    if (idx >= 0) {
+      let ln = cleaned[idx].trim();
+      if (/^(?:☬|[੪4$®]|PTR)(?=\s|$)/i.test(ln) || /(?:☬|[੪4$®]|PTR)$/i.test(ln)) {
+        ln = ln.replace(/^(?:☬|[੪4$®]|PTR)\s*/i, "");
+        ln = ln.replace(/\s*(?:☬|[੪4$®]|PTR)$/i, "");
+        cleaned[idx] = `☬ ${ln.trim()} ☬`;
+      }
+    }
+    return cleaned.join("\n");
+  }
+
+  function recoverPunjabiListBullets(text) {
+    const lines = String(text || "").split(/\r?\n/);
+    if (lines.length < 4) return text;
+    const hasBullet = lines.some((ln) => /^[\s]*[•●◦▪▫]\s+/.test(ln));
+    if (hasBullet) return text;
+
+    const eligible = [];
+    for (let i = 0; i < lines.length; i += 1) {
+      const t = lines[i].trim();
+      if (!t) continue;
+      const hasPunjabi = /[\u0A00-\u0A7F]/.test(t);
+      const longEnough = t.length >= 16;
+      const listLikeEnd = /[।.!?]$/.test(t);
+      if (hasPunjabi && longEnough && listLikeEnd) eligible.push(i);
+    }
+    // Apply only when document is clearly list-like.
+    if (eligible.length < 4) return text;
+
+    const out = [...lines];
+    for (const idx of eligible) {
+      if (idx === 0) continue; // likely heading
+      const trimmed = out[idx].trim();
+      if (!trimmed) continue;
+      out[idx] = `• ${trimmed}`;
+    }
+    return out.join("\n");
+  }
+
+  function normalizeReviewToken(token) {
+    const t = String(token || "").trim();
+    if (!t) return t;
+    if (t === "PTR" || t === "ptr") return "☬";
+    if (t === "$") return "☬";
+    if (t === "®") return "☬";
+    if (t === "੪" || t === "4" || t === "•" || t === "●" || t === "◦") return "•";
+    return t;
+  }
+
+  function looksPunjabiToken(t) {
+    return /[\u0A00-\u0A7F]/.test(String(t || ""));
+  }
+
+  function normalizeReviewTokenWithContext(rawToken, prevToken, nextToken) {
+    const t = String(rawToken || "").trim();
+    const base = normalizeReviewToken(t);
+    if (base !== t) return base;
+    if (t === "P" || t === "@" || t === "$" || t === "®") {
+      if (looksPunjabiToken(prevToken) || looksPunjabiToken(nextToken)) {
+        return "☬";
+      }
+    }
+    return t;
+  }
+
+  function levenshtein(a, b) {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    let prev = new Array(b.length + 1);
+    for (let j = 0; j <= b.length; j += 1) prev[j] = j;
+    for (let i = 1; i <= a.length; i += 1) {
+      const curr = [i];
+      for (let j = 1; j <= b.length; j += 1) {
+        const ins = curr[j - 1] + 1;
+        const del = prev[j] + 1;
+        const sub = prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
+        curr.push(Math.min(ins, del, sub));
+      }
+      prev = curr;
+    }
+    return prev[prev.length - 1];
+  }
+
+  function bestVocabCandidate(token) {
+    if (Object.prototype.hasOwnProperty.call(model.vocabCounts, token)) return token;
+    let best = null;
+    for (const [word, countStr] of Object.entries(model.vocabCounts)) {
+      if (Math.abs(word.length - token.length) > 2) continue;
+      const dist = levenshtein(token, word);
+      if (dist > 2) continue;
+      const count = Number(countStr || 0);
+      if (!best || dist < best.dist || (dist === best.dist && count > best.count)) {
+        best = { word, dist, count };
+      }
+    }
+    return best ? best.word : null;
+  }
+
+  function applyCorrections(text) {
+    let out = String(text || "");
+
+    // Apply phrase-level corrections first (longest pattern first).
+    const phraseKeys = Object.keys(model.phraseCorrections || {}).sort((a, b) => b.length - a.length);
+    for (const wrong of phraseKeys) {
+      const right = model.phraseCorrections[wrong];
+      if (!wrong || !right || wrong === right) continue;
+      out = out.replace(new RegExp(escapeRegex(wrong), "g"), right);
+    }
+
+    out = out.replace(/[\u0A00-\u0A7F]+/g, (token) => {
+      if (Object.prototype.hasOwnProperty.call(model.corrections, token)) {
+        return model.corrections[token];
+      }
+      return bestVocabCandidate(token) || token;
+    });
+
+    return normalizeOutput(out);
+  }
+
+  function learnPhraseCorrection(wrong, right) {
+    const w = String(wrong || "").trim();
+    const r = String(right || "").trim();
+    if (!w || !r || w === r) return;
+    if (w.length > 1200 || r.length > 1200) return;
+    model.phraseCorrections[w] = r;
+  }
+
+  function updateVocab(text) {
+    for (const t of tokenize(text)) {
+      model.vocabCounts[t] = Number(model.vocabCounts[t] || 0) + 1;
+    }
+  }
+
+  function trainFromPair(noisy, corrected) {
+    const a = tokenize(noisy);
+    const b = tokenize(corrected);
+    let rules = 0;
+
+    // Align noisy/corrected tokens with a small lookahead window so
+    // insertions/deletions do not break the entire training pairing.
+    let i = 0;
+    let j = 0;
+    const lookahead = 4;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) {
+        i += 1;
+        j += 1;
+        continue;
+      }
+
+      let synced = false;
+      for (let step = 1; step <= lookahead; step += 1) {
+        if (i + step < a.length && a[i + step] === b[j]) {
+          i += step;
+          synced = true;
+          break;
+        }
+        if (j + step < b.length && a[i] === b[j + step]) {
+          j += step;
+          synced = true;
+          break;
+        }
+      }
+      if (synced) {
+        continue;
+      }
+
+      if (b[j]) {
+        addCorrectionVote(a[i], b[j], 1);
+        model.corrections[a[i]] = b[j];
+        rules += 1;
+      }
+      i += 1;
+      j += 1;
+    }
+
+    updateVocab(corrected);
+    learnPhraseCorrection(noisy, corrected);
+    saveModel();
+    return { pairsSeen: Math.min(a.length, b.length), rules };
+  }
+
+  function stableSignature(noisy, corrected) {
+    return `${noisy.length}:${corrected.length}:${noisy.slice(0, 120)}::${corrected.slice(0, 120)}`;
+  }
+
+  function trainWithDedup(noisy, corrected, sourceName) {
+    const sig = stableSignature(noisy, corrected);
+    if (sig === lastTrainedSignature) {
+      setStatus(`Training skipped (${sourceName} unchanged from last training).`);
+      return null;
+    }
+    lastTrainedSignature = sig;
+    const info = trainFromPair(noisy, corrected);
+    setStatus(`Trained from ${sourceName}: pairs=${info.pairsSeen}, rules=${info.rules}`);
+    return info;
+  }
+
+  function learnPairImmediate(wrongText, rightText) {
+    const wrong = normalizeOutput(String(wrongText || "").trim());
+    const right = normalizeOutput(String(rightText || "").trim());
+    if (!wrong || !right || wrong === right) return false;
+
+    // Learn phrase-level replacement.
+    learnPhraseCorrection(wrong, right);
+
+    // If both sides are a single Gurmukhi token, also learn direct token correction.
+    const wTok = tokenize(wrong);
+    const rTok = tokenize(right);
+    if (wTok.length === 1 && rTok.length === 1 && wTok[0] && rTok[0]) {
+      addCorrectionVote(wTok[0], rTok[0], 1);
+      model.corrections[wTok[0]] = rTok[0];
+    }
+
+    updateVocab(right);
+    saveModel();
+    return true;
+  }
+
+  function learnTemplateFromReviewItem(item) {
+    if (!item) return false;
+    const label = normalizeOutput(String(item.corrected || "").trim());
+    const sig = String(item.glyphSig || "").trim();
+    if (!sig || !SYMBOL_LABELS.has(label)) return false;
+    const changed = appendTemplateSignature(label, sig);
+    if (changed) saveModel();
+    return changed;
+  }
+
+  function escapeHtml(s) {
+    return s
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function escapeXml(s) {
+    return s
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&apos;");
+  }
+
+  function decodeXml(s) {
+    return s
+      .replaceAll("&apos;", "'")
+      .replaceAll("&quot;", '"')
+      .replaceAll("&gt;", ">")
+      .replaceAll("&lt;", "<")
+      .replaceAll("&amp;", "&");
+  }
+
+  async function loadScript(src) {
+    await new Promise((resolve, reject) => {
+      const sc = document.createElement("script");
+      sc.src = src;
+      sc.async = true;
+      sc.onload = resolve;
+      sc.onerror = () => reject(new Error(`Failed loading ${src}`));
+      document.head.appendChild(sc);
+    });
+  }
+
+  async function ensureDepsWithConsent() {
+    if (depsLoaded) return true;
+
+    const consented = await new Promise((resolve) => {
+      els.consentModal.style.display = "flex";
+      const yes = () => { cleanup(); resolve(true); };
+      const no = () => { cleanup(); resolve(false); };
+      const cleanup = () => {
+        els.consentModal.style.display = "none";
+        els.consentYes.removeEventListener("click", yes);
+        els.consentNo.removeEventListener("click", no);
+      };
+      els.consentYes.addEventListener("click", yes);
+      els.consentNo.addEventListener("click", no);
+    });
+
+    if (!consented) {
+      setStatus("User did not consent to dependency download.");
+      return false;
+    }
+
+    try {
+      setStatus("Downloading tesseract.js...");
+      await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js");
+      setStatus("Downloading pdf.js...");
+      await loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js");
+      if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+      }
+      setStatus("Downloading jszip...");
+      await loadScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js");
+
+      depsLoaded = true;
+      setStatus("Dependencies loaded.");
+      return true;
+    } catch (err) {
+      setStatus(`Dependency load failed: ${err.message}`);
+      return false;
+    }
+  }
+
+  async function createWorker(lang) {
+    const worker = await Tesseract.createWorker(lang, 1, {
+      logger: (msg) => {
+        if (!msg || !msg.status) return;
+        const pct = typeof msg.progress === "number" ? ` ${(msg.progress * 100).toFixed(0)}%` : "";
+        setStatus(`${msg.status}${pct}`);
+      }
+    });
+    await worker.setParameters({
+      preserve_interword_spaces: "1",
+    });
+    return worker;
+  }
+
+  function confidenceScore(data) {
+    const words = (data && data.words) ? data.words : [];
+    if (!words.length) return -1;
+    let sum = 0;
+    let count = 0;
+    for (const w of words) {
+      const c = Number(w && w.confidence);
+      if (Number.isFinite(c)) {
+        sum += c;
+        count += 1;
+      }
+    }
+    return count ? (sum / count) : -1;
+  }
+
+  async function sourceToCanvas(source) {
+    if (source instanceof HTMLCanvasElement) {
+      const c = document.createElement("canvas");
+      c.width = source.width;
+      c.height = source.height;
+      c.getContext("2d").drawImage(source, 0, 0);
+      return c;
+    }
+    const bitmap = await createImageBitmap(source);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    return canvas;
+  }
+
+  function clampByte(x) {
+    if (x < 0) return 0;
+    if (x > 255) return 255;
+    return x;
+  }
+
+  function clampInt(v, min, max) {
+    return Math.max(min, Math.min(max, Math.floor(v)));
+  }
+
+  function appendTemplateSignature(label, sig) {
+    const key = String(label || "").trim();
+    const val = String(sig || "").trim();
+    if (!SYMBOL_LABELS.has(key) || !val) return false;
+    if (!model.templates[key]) model.templates[key] = [];
+    const list = model.templates[key];
+    if (list.includes(val)) return false;
+    list.push(val);
+    if (list.length > TEMPLATE_MAX_PER_LABEL) {
+      list.splice(0, list.length - TEMPLATE_MAX_PER_LABEL);
+    }
+    return true;
+  }
+
+  function bitCountHexDiff(a, b) {
+    const n = Math.min(a.length, b.length);
+    let bits = 0;
+    for (let i = 0; i < n; i += 1) {
+      const ax = Number.parseInt(a[i], 16);
+      const bx = Number.parseInt(b[i], 16);
+      if (Number.isNaN(ax) || Number.isNaN(bx)) return Number.POSITIVE_INFINITY;
+      bits += POPCOUNT_NIBBLE[ax ^ bx];
+    }
+    bits += Math.abs(a.length - b.length) * 4;
+    return bits;
+  }
+
+  function classifyTemplateSignature(sig) {
+    const input = String(sig || "").trim();
+    if (!input) return { label: "", score: 0 };
+    const bitLen = input.length * 4;
+    let bestLabel = "";
+    let bestScore = 0;
+    const labels = Object.keys(model.templates || {});
+    for (const label of labels) {
+      const samples = model.templates[label] || [];
+      if (!samples.length) continue;
+      let localBest = Number.POSITIVE_INFINITY;
+      for (const s of samples) {
+        const d = bitCountHexDiff(input, s);
+        if (d < localBest) localBest = d;
+      }
+      if (!Number.isFinite(localBest)) continue;
+      const score = 1 - (localBest / Math.max(1, bitLen));
+      if (score > bestScore) {
+        bestScore = score;
+        bestLabel = label;
+      }
+    }
+    return { label: bestLabel, score: bestScore };
+  }
+
+  function tightenCropToToken(box, tokenText, canvasWidth) {
+    const t = String(tokenText || "").trim();
+    if (!t) return box;
+    const charCount = Array.from(t).filter((ch) => /\S/.test(ch)).length;
+    if (!charCount) return box;
+    const h = Math.max(1, box.h);
+    const expectedW = Math.max(h, Math.round(h * (0.55 * charCount + 1.6)));
+    const cap = Math.max(expectedW, Math.round(h * 1.25));
+    if (box.w > (cap * 1.9)) {
+      const nextW = Math.max(1, Math.min(cap, canvasWidth - box.x0));
+      return { ...box, w: nextW };
+    }
+    return box;
+  }
+
+  function makeSnippetSignature(canvas, bbox, tokenText) {
+    if (!canvas || !bbox) return "";
+    const pad = 2;
+    const x0 = clampInt((bbox.x0 || 0) - pad, 0, canvas.width - 1);
+    const y0 = clampInt((bbox.y0 || 0) - pad, 0, canvas.height - 1);
+    const x1 = clampInt((bbox.x1 || 0) + pad, x0 + 1, canvas.width);
+    const y1 = clampInt((bbox.y1 || 0) + pad, y0 + 1, canvas.height);
+    const tightened = tightenCropToToken({
+      x0,
+      y0,
+      w: Math.max(1, x1 - x0),
+      h: Math.max(1, y1 - y0)
+    }, tokenText, canvas.width);
+    const w = tightened.w;
+    const h = tightened.h;
+
+    const out = document.createElement("canvas");
+    out.width = TEMPLATE_SIZE;
+    out.height = TEMPLATE_SIZE;
+    const ctx = out.getContext("2d", { alpha: false });
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(canvas, tightened.x0, tightened.y0, w, h, 0, 0, out.width, out.height);
+
+    const img = ctx.getImageData(0, 0, out.width, out.height);
+    const d = img.data;
+    let sum = 0;
+    const gray = new Uint8Array(TEMPLATE_SIZE * TEMPLATE_SIZE);
+    for (let i = 0, p = 0; i < d.length; i += 4, p += 1) {
+      const g = ((d[i] * 299) + (d[i + 1] * 587) + (d[i + 2] * 114)) / 1000;
+      gray[p] = g;
+      sum += g;
+    }
+    const threshold = sum / gray.length;
+    let ones = 0;
+    let bits = "";
+    let nibble = 0;
+    let nibbleBits = 0;
+    for (let p = 0; p < gray.length; p += 1) {
+      const bit = gray[p] < threshold ? 1 : 0;
+      if (bit) ones += 1;
+      nibble = (nibble << 1) | bit;
+      nibbleBits += 1;
+      if (nibbleBits === 4) {
+        bits += nibble.toString(16);
+        nibble = 0;
+        nibbleBits = 0;
+      }
+    }
+    if (ones < TEMPLATE_MIN_PIXELS) return "";
+    return bits;
+  }
+
+  function normalizeWordWithTemplate(rawText, glyphSig) {
+    const text = String(rawText || "").trim();
+    if (!text || !glyphSig || (els.symbolMode.value || "keep") === "skip") return text;
+    const pick = classifyTemplateSignature(glyphSig);
+    if (pick.score >= TEMPLATE_MATCH_THRESHOLD && SYMBOL_LABELS.has(pick.label)) {
+      return pick.label;
+    }
+    return text;
+  }
+
+  function refineTokenBBoxes(words) {
+    const list = Array.isArray(words) ? words : [];
+    if (!list.length) return [];
+
+    const heights = list
+      .map((w) => w && w.bbox ? Math.max(1, (w.bbox.y1 || 0) - (w.bbox.y0 || 0)) : 0)
+      .filter((h) => h > 0)
+      .sort((a, b) => a - b);
+    const medianH = heights.length ? heights[Math.floor(heights.length / 2)] : 14;
+    const yTol = Math.max(8, Math.floor(medianH * 0.6));
+
+    const rows = [];
+    for (const w of list) {
+      const b = w && w.bbox ? w.bbox : null;
+      if (!b) continue;
+      const y = Math.floor(((b.y0 || 0) + (b.y1 || 0)) / 2);
+      let row = rows.find((r) => Math.abs(r.y - y) <= yTol);
+      if (!row) {
+        row = { y, items: [] };
+        rows.push(row);
+      }
+      row.items.push(w);
+    }
+
+    for (const row of rows) {
+      row.items.sort((a, b) => ((a.bbox && a.bbox.x0) || 0) - ((b.bbox && b.bbox.x0) || 0));
+      for (let i = 0; i < row.items.length - 1; i += 1) {
+        const cur = row.items[i];
+        const next = row.items[i + 1];
+        const cb = cur && cur.bbox ? cur.bbox : null;
+        const nb = next && next.bbox ? next.bbox : null;
+        if (!cb || !nb) continue;
+        const h = Math.max(1, (cb.y1 || 0) - (cb.y0 || 0));
+        const gap = Math.max(1, Math.floor(h * 0.12));
+        const maxRight = Math.max((cb.x0 || 0) + 1, (nb.x0 || 0) - gap);
+        if ((cb.x1 || 0) > maxRight) {
+          cb.x1 = maxRight;
+        }
+      }
+    }
+    return list;
+  }
+
+  function makeSnippetDataUrl(canvas, bbox, tokenText) {
+    if (!canvas || !bbox) return "";
+    const pad = 2;
+    const x0 = clampInt((bbox.x0 || 0) - pad, 0, canvas.width - 1);
+    const y0 = clampInt((bbox.y0 || 0) - pad, 0, canvas.height - 1);
+    const x1 = clampInt((bbox.x1 || 0) + pad, x0 + 1, canvas.width);
+    const y1 = clampInt((bbox.y1 || 0) + pad, y0 + 1, canvas.height);
+    const tightened = tightenCropToToken({
+      x0,
+      y0,
+      w: Math.max(1, x1 - x0),
+      h: Math.max(1, y1 - y0)
+    }, tokenText, canvas.width);
+    const w = tightened.w;
+    const h = tightened.h;
+
+    const out = document.createElement("canvas");
+    out.width = Math.min(176, w * 2);
+    out.height = Math.min(68, h * 2);
+    const ctx = out.getContext("2d", { alpha: false });
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(canvas, tightened.x0, tightened.y0, w, h, 0, 0, out.width, out.height);
+    return out.toDataURL("image/png");
+  }
+
+  function attachSnippets(words, canvas, maxWords = 1200) {
+    const list = refineTokenBBoxes(Array.isArray(words) ? words : []);
+    const out = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const w = list[i] || {};
+      const text = String(w.text || "").trim();
+      if (!text) continue;
+      if (out.length >= maxWords) break;
+      const bbox = w.bbox || null;
+      const glyphSig = bbox ? makeSnippetSignature(canvas, bbox, text) : "";
+      const templated = normalizeWordWithTemplate(text, glyphSig);
+      out.push({
+        ...w,
+        text: templated || text,
+        rawText: text,
+        glyphSig,
+        snippet: bbox ? makeSnippetDataUrl(canvas, bbox, text) : "",
+      });
+    }
+    return out;
+  }
+
+  function textFromWordsOrRaw(words, rawText) {
+    const list = Array.isArray(words) ? words.filter((w) => w && w.text && w.bbox) : [];
+    if (!list.length) return String(rawText || "");
+
+    const heights = list.map((w) => Math.max(1, (w.bbox.y1 || 0) - (w.bbox.y0 || 0))).sort((a, b) => a - b);
+    const medianH = heights[Math.floor(heights.length / 2)] || 12;
+    const yTol = Math.max(8, Math.floor(medianH * 0.6));
+
+    const rows = [];
+    for (const w of list) {
+      const y = Math.floor((w.bbox.y0 + w.bbox.y1) / 2);
+      let row = rows.find((r) => Math.abs(r.y - y) <= yTol);
+      if (!row) {
+        row = { y, words: [] };
+        rows.push(row);
+      }
+      row.words.push(w);
+    }
+
+    rows.sort((a, b) => a.y - b.y);
+    const lines = rows.map((r) => {
+      r.words.sort((a, b) => (a.bbox.x0 || 0) - (b.bbox.x0 || 0));
+      return r.words.map((w) => String(w.text || "").trim()).filter(Boolean).join(" ");
+    }).filter(Boolean);
+
+    return lines.join("\n");
+  }
+
+  function wordsToLineUnits(words) {
+    const list = Array.isArray(words) ? words.filter((w) => w && w.bbox) : [];
+    if (!list.length) return [];
+
+    const heights = list.map((w) => Math.max(1, (w.bbox.y1 || 0) - (w.bbox.y0 || 0))).sort((a, b) => a - b);
+    const medianH = heights[Math.floor(heights.length / 2)] || 12;
+    const yTol = Math.max(8, Math.floor(medianH * 0.6));
+
+    const rows = [];
+    for (const w of list) {
+      const y = Math.floor(((w.bbox.y0 || 0) + (w.bbox.y1 || 0)) / 2);
+      let row = rows.find((r) => Math.abs(r.y - y) <= yTol);
+      if (!row) {
+        row = { y, words: [] };
+        rows.push(row);
+      }
+      row.words.push(w);
+    }
+
+    rows.sort((a, b) => a.y - b.y);
+    return rows.map((r) => {
+      r.words.sort((a, b) => (a.bbox.x0 || 0) - (b.bbox.x0 || 0));
+      const ocr = r.words.map((w) => String(w.text || "").trim()).filter(Boolean).join(" ");
+      const raw = r.words.map((w) => String(w.rawText || w.text || "").trim()).filter(Boolean).join(" ");
+      return { ocr, rawOcr: raw };
+    }).filter((x) => x.ocr || x.rawOcr);
+  }
+
+  function preprocessCanvas(baseCanvas, mode) {
+    const canvas = document.createElement("canvas");
+    canvas.width = baseCanvas.width;
+    canvas.height = baseCanvas.height;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    ctx.drawImage(baseCanvas, 0, 0);
+    if (mode === "original") return canvas;
+
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = img.data;
+    const gray = new Uint8Array((d.length / 4) | 0);
+    for (let i = 0, p = 0; i < d.length; i += 4, p += 1) {
+      gray[p] = clampByte((0.299 * d[i]) + (0.587 * d[i + 1]) + (0.114 * d[i + 2]));
+    }
+
+    if (mode === "denoise") {
+      for (let p = 0, i = 0; p < gray.length; p += 1, i += 4) {
+        const g = gray[p];
+        d[i] = g;
+        d[i + 1] = g;
+        d[i + 2] = g;
+      }
+      ctx.putImageData(img, 0, 0);
+      return canvas;
+    }
+
+    if (mode === "sharpen") {
+      // Simple unsharp-like local contrast boost.
+      for (let p = 0, i = 0; p < gray.length; p += 1, i += 4) {
+        const g = gray[p];
+        const boosted = clampByte((g - 128) * 1.35 + 128);
+        d[i] = boosted;
+        d[i + 1] = boosted;
+        d[i + 2] = boosted;
+      }
+      ctx.putImageData(img, 0, 0);
+      return canvas;
+    }
+
+    // Otsu threshold.
+    const hist = new Uint32Array(256);
+    for (let p = 0; p < gray.length; p += 1) hist[gray[p]] += 1;
+    const total = gray.length;
+    let sum = 0;
+    for (let t = 0; t < 256; t += 1) sum += t * hist[t];
+    let sumB = 0;
+    let wB = 0;
+    let maxVar = -1;
+    let threshold = 127;
+    for (let t = 0; t < 256; t += 1) {
+      wB += hist[t];
+      if (wB === 0) continue;
+      const wF = total - wB;
+      if (wF === 0) break;
+      sumB += t * hist[t];
+      const mB = sumB / wB;
+      const mF = (sum - sumB) / wF;
+      const between = wB * wF * (mB - mF) * (mB - mF);
+      if (between > maxVar) {
+        maxVar = between;
+        threshold = t;
+      }
+    }
+    for (let p = 0, i = 0; p < gray.length; p += 1, i += 4) {
+      const v = gray[p] > threshold ? 255 : 0;
+      d[i] = v;
+      d[i + 1] = v;
+      d[i + 2] = v;
+    }
+    ctx.putImageData(img, 0, 0);
+    return canvas;
+  }
+
+  async function runWithPreprocess(worker, source, selectedMode) {
+    const baseCanvas = await sourceToCanvas(source);
+    const candidates = selectedMode === "best"
+      ? ["original", "otsu", "denoise", "sharpen"]
+      : [selectedMode];
+
+    let best = null;
+    for (const mode of candidates) {
+      if (activeRun && activeRun.cancelled) throw new Error("OCR stopped by user.");
+      const processed = preprocessCanvas(baseCanvas, mode);
+      const { data } = await worker.recognize(processed);
+      const score = confidenceScore(data);
+      if (!best || score > best.score) {
+        best = { mode, score, data, processedCanvas: processed };
+      }
+    }
+    return best || { mode: "original", score: -1, data: { text: "", words: [] }, processedCanvas: baseCanvas };
+  }
+
+  function renderSegmentation(words) {
+    const rows = words.slice(0, 300).map((w, i) => {
+      const b = w.bbox || { x0: 0, y0: 0, x1: 0, y1: 0 };
+      const width = Math.max(0, (b.x1 || 0) - (b.x0 || 0));
+      const height = Math.max(0, (b.y1 || 0) - (b.y0 || 0));
+      const conf = typeof w.confidence === "number" ? w.confidence.toFixed(1) : "-";
+      return `<tr><td>${i + 1}</td><td>${escapeHtml(w.text || "")}</td><td>${b.x0 || 0}</td><td>${b.y0 || 0}</td><td>${width}</td><td>${height}</td><td>${conf}</td></tr>`;
+    }).join("");
+    els.segBody.innerHTML = rows;
+  }
+
+  function clearWorkspaceForNewRun() {
+    latestRawText = "";
+    latestWords = [];
+    latestReviewItems = [];
+    els.outputText.value = "";
+    els.segBody.innerHTML = "";
+    els.reviewBody.innerHTML = "";
+    refreshButtons();
+    setProgress("Idle", 0, "Select files and click Start OCR.");
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function makeDocXmlFromText(text) {
+    const lines = (text || "").split(/\r?\n/);
+    const paragraphs = lines.map((line) => `<w:p><w:r><w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r></w:p>`).join("");
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+ xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+ xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+ xmlns:v="urn:schemas-microsoft-com:vml"
+ xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing"
+ xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+ xmlns:w10="urn:schemas-microsoft-com:office:word"
+ xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+ xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"
+ xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"
+ xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk"
+ xmlns:wne="http://schemas.microsoft.com/office/2006/wordml"
+ xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
+ mc:Ignorable="w14 wp14">
+  <w:body>
+    ${paragraphs}
+    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
+  </w:body>
+</w:document>`;
+  }
+
+  async function makeDocxBlob(text) {
+    const zip = new JSZip();
+    zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`);
+    zip.folder("_rels").file(".rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`);
+    zip.folder("word").file("document.xml", makeDocXmlFromText(text));
+    return zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+  }
+
+  async function extractTextFromDocx(file) {
+    const buf = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(buf);
+    const docFile = zip.file("word/document.xml");
+    if (!docFile) return "";
+    const xml = await docFile.async("string");
+
+    const paras = xml.match(/<w:p\b[\s\S]*?<\/w:p>/g) || [];
+    const lines = paras.map((p) => {
+      const runs = p.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+      const text = runs.map((r) => {
+        const m = r.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/);
+        return m ? decodeXml(m[1]) : "";
+      }).join("");
+      return text;
+    });
+
+    return lines.join("\n").trim();
+  }
+
+  function refreshButtons() {
+    const hasText = Boolean((els.outputText.value || "").trim());
+    const hasReview = latestReviewItems.length > 0;
+    els.saveNewDocxBtn.disabled = !hasText;
+    els.saveTxtBtn.disabled = !hasText;
+    els.appendDocxBtn.disabled = !hasText || !(els.existingDocx.files && els.existingDocx.files[0]);
+    els.applyReviewBtn.disabled = !hasReview;
+    els.trainReviewBtn.disabled = !hasReview;
+  }
+
+  function buildReviewItems() {
+    const mode = els.reviewMode.value || "word";
+    if (mode === "line") {
+      const lineUnits = wordsToLineUnits(latestWords || []);
+      if (lineUnits.length) {
+        latestReviewItems = lineUnits.map((ln) => {
+          const shown = normalizeOutput(normalizeReviewToken(ln.ocr || ""));
+          return {
+            rawOcr: ln.rawOcr || ln.ocr || "",
+            ocr: shown,
+            snippet: "",
+            bbox: null,
+            corrected: shown,
+            draft: shown,
+            decision: "accepted"
+          };
+        });
+      } else {
+        const lines = (latestRawText || "")
+          .split(/\r?\n/)
+          .map((x) => x.trim())
+          .filter(Boolean);
+        latestReviewItems = lines.map((line) => {
+          const shown = normalizeOutput(normalizeReviewToken(line));
+          return {
+            rawOcr: line,
+            ocr: shown,
+            snippet: "",
+            bbox: null,
+            corrected: shown,
+            draft: shown,
+            decision: "accepted"
+          };
+        });
+      }
+    } else {
+      const wordsRaw = (latestWords || [])
+        .filter((w) => w && w.text)
+        .map((w) => ({
+          text: String(w.text).trim(),
+          rawText: String(w.rawText || w.text).trim(),
+          rawOcr: String(w.text).trim(),
+          snippet: w.snippet || "",
+          bbox: w.bbox || null,
+          glyphSig: String(w.glyphSig || "").trim(),
+        }))
+        .filter((w) => w.rawOcr);
+      const fallback = tokenize(latestRawText || "").map((t) => ({ rawOcr: t, snippet: "", bbox: null }));
+      const usableRaw = wordsRaw.length ? wordsRaw : fallback;
+      const usable = usableRaw.map((w, idx) => {
+        const prev = usableRaw[idx - 1] ? usableRaw[idx - 1].rawOcr : "";
+        const next = usableRaw[idx + 1] ? usableRaw[idx + 1].rawOcr : "";
+        return {
+          ...w,
+          ocr: normalizeReviewTokenWithContext(w.rawOcr, prev, next),
+        };
+      });
+      latestReviewItems = usable.slice(0, 600).map((w, idx) => {
+        const shown = w.ocr || normalizeReviewToken(w.rawOcr || "");
+        return {
+          rawOcr: w.rawText || w.rawOcr || shown,
+          ocr: shown,
+          snippet: w.snippet || "",
+          bbox: w.bbox || null,
+          glyphSig: w.glyphSig || "",
+          corrected: shown,
+          draft: shown,
+          decision: "accepted"
+        };
+      });
+    }
+  }
+
+  function getReviewSuggestions(item, maxOptions = 8) {
+    const wrong = String((item && (item.rawOcr || item.ocr)) || "").trim();
+    const current = String((item && item.corrected) || "").trim();
+    const modelRead = String((item && item.ocr) || "").trim();
+    const out = [];
+    const seen = new Set();
+    const pushOpt = (value, score) => {
+      const v = String(value || "").trim();
+      if (!v || seen.has(v)) return;
+      seen.add(v);
+      out.push({ value: v, score: Number(score || 0) });
+    };
+
+    if (current) pushOpt(current, 1000000);
+    if (modelRead) pushOpt(modelRead, 999999);
+
+    const voted = model.correctionVotes && wrong ? model.correctionVotes[wrong] : null;
+    if (voted && typeof voted === "object") {
+      for (const [candidate, c] of Object.entries(voted)) {
+        const votes = Number(c || 0);
+        const vocabBoost = Number(model.vocabCounts[candidate] || 0);
+        pushOpt(candidate, (votes * 1000) + vocabBoost);
+      }
+    }
+
+    if (wrong && model.corrections[wrong]) {
+      const cand = String(model.corrections[wrong] || "").trim();
+      const vocabBoost = Number(model.vocabCounts[cand] || 0);
+      pushOpt(cand, 500 + vocabBoost);
+    }
+
+    return out
+      .sort((a, b) => b.score - a.score)
+      .slice(0, maxOptions)
+      .map((x) => x.value);
+  }
+
+  function renderReviewItems() {
+    const rows = latestReviewItems.map((item, idx) => (
+      (() => {
+        const options = getReviewSuggestions(item);
+        const optionHtml = options
+          .map((opt) => `<option value="${escapeHtml(opt)}"${opt === item.draft ? " selected" : ""}>${escapeHtml(opt)}</option>`)
+          .join("");
+        return (
+      `<tr data-review-idx="${idx}">
+        <td>${idx + 1}</td>
+        <td>${item.snippet ? `<img class="snippet-img" alt="snippet ${idx + 1}" src="${item.snippet}" />` : "<small class='muted'>-</small>"}</td>
+        <td>${escapeHtml(item.ocr)}</td>
+        <td>
+          <input class="mini-input review-input" data-review-idx="${idx}" value="${escapeHtml(item.draft)}" />
+          <select class="mini-input review-suggest" data-review-idx="${idx}">
+            ${optionHtml}
+          </select>
+        </td>
+      </tr>
+      <tr class="review-action-row" data-review-idx="${idx}">
+        <td></td>
+        <td colspan="3">
+          <div class="review-actions">
+            <button class="secondary review-accept-btn" data-review-idx="${idx}" type="button">Accept Model Output</button>
+            <button class="secondary review-implement-btn" data-review-idx="${idx}" type="button">Implement Change</button>
+            <small id="review-state-${idx}">${item.decision === "corrected" ? "Using your correction" : "Using model output"}</small>
+          </div>
+        </td>
+      </tr>`
+        );
+      })()
+    )).join("");
+    els.reviewBody.innerHTML = rows;
+    refreshButtons();
+  }
+
+  function reviewedNoisyText() {
+    const mode = els.reviewMode.value || "word";
+    if (mode === "line") return latestReviewItems.map((x) => (x.rawOcr || x.ocr)).join("\n");
+    return latestReviewItems.map((x) => (x.rawOcr || x.ocr)).join(" ");
+  }
+
+  function reviewedCorrectedText() {
+    const mode = els.reviewMode.value || "word";
+    if (mode === "line") return latestReviewItems.map((x) => x.corrected).join("\n");
+    return latestReviewItems.map((x) => x.corrected).join(" ");
+  }
+
+  function syncReviewToEditorPane() {
+    if (!latestReviewItems.length) return 0;
+    const mode = els.reviewMode.value || "word";
+    const reviewed = mode === "word"
+      ? applyWordReviewToFormattedText(els.outputText.value || latestRawText || "", latestReviewItems)
+      : reviewedCorrectedText();
+    els.outputText.value = reviewed;
+    refreshButtons();
+    return latestReviewItems.length;
+  }
+
+  function syncSingleReviewItemToEditor(idx) {
+    if (!Number.isInteger(idx) || idx < 0 || idx >= latestReviewItems.length) return 0;
+    const mode = els.reviewMode.value || "word";
+    const item = latestReviewItems[idx];
+    if (!item) return 0;
+    if (mode === "line") {
+      const lines = String(els.outputText.value || "").split(/\r?\n/);
+      if (idx < lines.length) {
+        lines[idx] = item.corrected || lines[idx];
+        els.outputText.value = lines.join("\n");
+        refreshButtons();
+        return 1;
+      }
+      return 0;
+    }
+    const src = String(els.outputText.value || "");
+    if (!src.trim()) return 0;
+    const parts = src.split(/(\s+)/);
+    const tokenPartIdx = [];
+    for (let i = 0; i < parts.length; i += 1) {
+      if (parts[i] && !/^\s+$/.test(parts[i])) tokenPartIdx.push(i);
+    }
+    if (idx >= tokenPartIdx.length) return 0;
+    const pIdx = tokenPartIdx[idx];
+    parts[pIdx] = item.corrected || parts[pIdx];
+    els.outputText.value = parts.join("");
+    refreshButtons();
+    return 1;
+  }
+
+  function syncEditorToReviewItems() {
+    if (!latestReviewItems.length) return 0;
+    const mode = els.reviewMode.value || "word";
+    const edited = normalizeOutput(String(els.outputText.value || ""));
+    let synced = 0;
+
+    if (mode === "line") {
+      const lines = edited.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+      const lim = Math.min(lines.length, latestReviewItems.length);
+      for (let i = 0; i < lim; i += 1) {
+        const item = latestReviewItems[i];
+        const next = lines[i];
+        if (!next) continue;
+        item.draft = next;
+        item.corrected = next;
+        item.decision = next === (item.ocr || "").trim() ? "accepted" : "corrected";
+        synced += 1;
+      }
+    } else {
+      const tokens = edited.match(/\S+/g) || [];
+      let j = 0;
+      const lookahead = 8;
+      for (let i = 0; i < latestReviewItems.length; i += 1) {
+        const item = latestReviewItems[i];
+        const expected = String(item.corrected || item.ocr || "").trim();
+        if (!expected) continue;
+        if (j >= tokens.length) break;
+
+        let pick = j;
+        let foundAnchor = false;
+        for (let k = j; k < Math.min(tokens.length, j + lookahead); k += 1) {
+          if (String(tokens[k] || "").trim() === expected) {
+            pick = k;
+            foundAnchor = true;
+            break;
+          }
+        }
+
+        const next = String(tokens[pick] || "").trim();
+        if (!next) continue;
+        item.draft = next;
+        item.corrected = next;
+        item.decision = next === (item.ocr || "").trim() ? "accepted" : "corrected";
+        synced += 1;
+        j = foundAnchor ? (pick + 1) : (j + 1);
+      }
+    }
+
+    if (synced > 0) {
+      renderReviewItems();
+    }
+    return synced;
+  }
+
+  function applyWordReviewToFormattedText(baseText, items) {
+    const source = String(baseText || "");
+    if (!source) return reviewedCorrectedText();
+    const parts = source.split(/(\s+)/);
+    let k = 0;
+    for (let i = 0; i < parts.length; i += 1) {
+      const p = parts[i];
+      if (!p || /^\s+$/.test(p)) continue;
+      if (k >= items.length) break;
+      parts[i] = items[k].corrected || parts[i];
+      k += 1;
+    }
+    return parts.join("");
+  }
+
+  function learnFromReviewUnits() {
+    let learned = 0;
+    for (const item of latestReviewItems) {
+      if (!item) continue;
+      const wrong = String(item.rawOcr || item.ocr || "").trim();
+      const right = String(item.corrected || "").trim();
+      if (learnTemplateFromReviewItem(item)) learned += 1;
+      if (!wrong || !right || wrong === right) continue;
+      addCorrectionVote(wrong, right, 1);
+      learnPhraseCorrection(wrong, right);
+      learned += 1;
+    }
+    return learned;
+  }
+
+  function applyReviewToPane() {
+    if (!latestReviewItems.length) {
+      setStatus("No review items available. Run OCR first.");
+      flashButton(els.applyReviewBtn, "btn-warn", "Nothing To Apply");
+      return;
+    }
+    syncReviewToEditorPane();
+    // Applying review means user-approved corrections should be learnable immediately.
+    trainFromReviewItems();
+    setStatus("Applied your review decisions to right correction pane.");
+    flashButton(els.applyReviewBtn, "btn-ok", "Applied");
+  }
+
+  function trainFromReviewItems() {
+    if (!latestReviewItems.length) {
+      setStatus("No review items available. Run OCR first.");
+      flashButton(els.trainReviewBtn, "btn-warn", "No Data");
+      return;
+    }
+    const noisy = reviewedNoisyText();
+    const corrected = normalizeOutput(reviewedCorrectedText());
+    const learnedUnits = learnFromReviewUnits();
+    trainWithDedup(noisy, corrected, `${els.reviewMode.value} decisions`);
+    if (latestDocFingerprint) {
+      model.documentCorrections[latestDocFingerprint] = corrected;
+    }
+    if (learnedUnits > 0) {
+      saveModel();
+      setStatus(`Trained from decisions. Learned ${learnedUnits} explicit review replacements.`);
+    } else {
+      saveModel();
+    }
+    flashButton(els.trainReviewBtn, "btn-ok", "Trained");
+  }
+
+  async function ocrImageFile(worker, file, pass, totalPass, index, totalFiles) {
+    if (activeRun && activeRun.cancelled) throw new Error("OCR stopped by user.");
+    setStatus(`Loop ${pass}/${totalPass}: OCR ${index + 1}/${totalFiles} ${file.name}`);
+    const selectedMode = els.preprocessMode.value || "best";
+    const best = await runWithPreprocess(worker, file, selectedMode);
+    if (activeRun && activeRun.cancelled) throw new Error("OCR stopped by user.");
+    const rawWords = (best.data && best.data.words) || [];
+    const words = attachSnippets(rawWords, best.processedCanvas);
+    const text = textFromWordsOrRaw(words, (best.data && best.data.text) || "");
+    return {
+      text,
+      words,
+      mode: best.mode,
+      score: best.score,
+    };
+  }
+
+  async function ocrPdfFile(worker, file, pass, totalPass, index, totalFiles) {
+    if (activeRun && activeRun.cancelled) throw new Error("OCR stopped by user.");
+    setStatus(`Loop ${pass}/${totalPass}: PDF ${index + 1}/${totalFiles} ${file.name}`);
+    const arr = await file.arrayBuffer();
+    const loadingTask = window.pdfjsLib.getDocument({ data: arr });
+    const pdf = await loadingTask.promise;
+
+    let textParts = [];
+    let words = [];
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+      if (activeRun && activeRun.cancelled) throw new Error("OCR stopped by user.");
+      setStatus(`Loop ${pass}/${totalPass}: ${file.name} page ${pageNum}/${pdf.numPages}`);
+      const page = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d", { alpha: false });
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      const selectedMode = els.preprocessMode.value || "best";
+      const best = await runWithPreprocess(worker, canvas, selectedMode);
+      if (activeRun && activeRun.cancelled) throw new Error("OCR stopped by user.");
+      const rawWords = (best.data && best.data.words) || [];
+      const pageWords = attachSnippets(rawWords, best.processedCanvas);
+      textParts.push(textFromWordsOrRaw(pageWords, (best.data && best.data.text) || "").trim());
+      words.push(...pageWords);
+    }
+
+    return { text: textParts.filter(Boolean).join("\n\n"), words };
+  }
+
+  async function runOcrLoop() {
+    const files = Array.from(els.sourceFiles.files || []);
+    if (!files.length) {
+      setStatus("Choose at least one image or PDF.");
+      return;
+    }
+
+    // Learn pending editor corrections from the previously loaded document
+    // before changing fingerprint/run state.
+    trainFromEditorIfNeeded({ silent: true });
+
+    // Clear stale output/review immediately for a new run.
+    clearWorkspaceForNewRun();
+    setProgress("Preparing", 5, "Preparing OCR run...");
+
+    const depsOK = await ensureDepsWithConsent();
+    if (!depsOK) return;
+    latestDocFingerprint = await fingerprintFilesAsync(files);
+    setProgress("Preparing", 10, "Starting OCR on selected files...");
+
+    const parsedLoops = Number.parseInt(String(els.loops.value || "2"), 10);
+    const loops = Number.isFinite(parsedLoops) ? Math.max(1, Math.min(5, parsedLoops)) : 2;
+    const lang = els.lang.value || "pan+eng";
+    const symbolMode = els.symbolMode.value || "keep";
+    const effectiveLang = symbolMode === "keep" && !lang.includes("eng") ? `${lang}+eng` : lang;
+
+    activeRun = { cancelled: false };
+    els.runBtn.disabled = true;
+    els.stopBtn.disabled = false;
+    let worker = null;
+    try {
+      worker = await createWorker(effectiveLang);
+      setProgress("Reading", 15, "OCR engine initialized.");
+      let finalRaw = "";
+      let finalWords = [];
+      let corrected = "";
+
+      for (let pass = 1; pass <= loops; pass += 1) {
+        if (activeRun && activeRun.cancelled) throw new Error("OCR stopped by user.");
+        setStatus(`Starting loop ${pass}/${loops}...`);
+        const rawParts = [];
+        const words = [];
+
+        for (let i = 0; i < files.length; i += 1) {
+          const f = files[i];
+          const isPdf = f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf";
+          if (isPdf) {
+            const pdfRes = await ocrPdfFile(worker, f, pass, loops, i, files.length);
+            rawParts.push((pdfRes.text || "").trim());
+            words.push(...pdfRes.words);
+          } else {
+            const imgRes = await ocrImageFile(worker, f, pass, loops, i, files.length);
+            rawParts.push((imgRes.text || "").trim());
+            words.push(...(imgRes.words || []));
+          }
+          const done = ((pass - 1) * files.length) + (i + 1);
+          const total = Math.max(1, loops * files.length);
+          const pct = 15 + Math.floor((done / total) * 65);
+          setProgress("Reading", pct, `Processed ${done}/${total} items`);
+        }
+
+        finalRaw = rawParts.filter(Boolean).join("\n\n");
+        finalWords = words;
+        setProgress("Correction", 85, "Applying learned corrections...");
+        corrected = applyCorrections(finalRaw);
+        updateVocab(corrected);
+        saveModel();
+        setStatus(`Completed loop ${pass}/${loops}.`);
+      }
+
+      latestRawText = finalRaw;
+      latestWords = finalWords;
+
+      const memorized = latestDocFingerprint ? model.documentCorrections[latestDocFingerprint] : "";
+      const finalOut = memorized ? normalizeOutput(memorized) : normalizeOutput(corrected);
+      els.outputText.value = finalOut;
+      renderSegmentation(finalWords);
+      buildReviewItems();
+      renderReviewItems();
+      refreshButtons();
+      setProgress("Ready for Review", 100, "OCR complete. Review and correct as needed.");
+      if (memorized) {
+        setStatus("Completed OCR. Applied memorized correction for this document.");
+      } else {
+        setStatus(`Completed OCR for ${files.length} file(s), ${loops} loop(s) using ${effectiveLang} with preprocess=${els.preprocessMode.value || "best"}.`);
+      }
+      lastRunDocFingerprint = latestDocFingerprint;
+    } catch (err) {
+      setProgress("Error", 100, `OCR failed: ${err.message}`);
+      setStatus(`OCR failed: ${err.message}`);
+    } finally {
+      if (worker) {
+        try { await worker.terminate(); } catch (_) {}
+      }
+      activeRun = null;
+      els.runBtn.disabled = false;
+      els.stopBtn.disabled = true;
+    }
+  }
+
+  function trainFromEditorIfNeeded(options = {}) {
+    const silent = Boolean(options.silent);
+    const edited = normalizeOutput((els.outputText.value || "").trim());
+    if (!edited || !latestRawText) {
+      if (!silent) {
+        setStatus("Nothing to train yet. Run OCR and edit right-pane text first.");
+        flashButton(els.trainPaneBtn, "btn-warn", "No Data");
+      }
+      return;
+    }
+    els.outputText.value = edited;
+    trainWithDedup(latestRawText, edited, "right pane");
+    if (latestDocFingerprint) {
+      model.documentCorrections[latestDocFingerprint] = edited;
+      saveModel();
+    }
+    let synced = 0;
+    if (!silent) {
+      synced = syncEditorToReviewItems();
+    }
+    if (!silent) {
+      if (synced > 0) {
+        setStatus(`Trained from edited text and synced ${synced} review item(s).`);
+      }
+      flashButton(els.trainPaneBtn, "btn-ok", "Trained");
+    }
+  }
+
+  async function saveAsNewDocx() {
+    const edited = normalizeOutput((els.outputText.value || "").trim());
+    if (!edited) {
+      setStatus("Right pane is empty. Nothing to save.");
+      flashButton(els.saveNewDocxBtn, "btn-warn", "Empty");
+      return;
+    }
+
+    const depsOK = await ensureDepsWithConsent();
+    if (!depsOK) return;
+
+    flashButton(els.saveNewDocxBtn, "btn-busy", "Saving...");
+    trainFromEditorIfNeeded({ silent: true });
+    const blob = await makeDocxBlob(edited);
+    triggerDownload(blob, `punjabi_ocr_${Date.now()}.docx`);
+    setStatus("Saved new DOCX and training applied.");
+    flashButton(els.saveNewDocxBtn, "btn-ok", "Saved");
+  }
+
+  function saveTxt() {
+    const edited = normalizeOutput((els.outputText.value || "").trim());
+    if (!edited) {
+      setStatus("Right pane is empty. Nothing to save.");
+      flashButton(els.saveTxtBtn, "btn-warn", "Empty");
+      return;
+    }
+    trainFromEditorIfNeeded();
+    triggerDownload(new Blob([edited], { type: "text/plain;charset=utf-8" }), `punjabi_ocr_${Date.now()}.txt`);
+    setStatus("Saved TXT and training applied.");
+    flashButton(els.saveTxtBtn, "btn-ok", "Saved");
+  }
+
+  async function appendToExistingDocx() {
+    const edited = normalizeOutput((els.outputText.value || "").trim());
+    const existing = els.existingDocx.files && els.existingDocx.files[0];
+    if (!edited || !existing) {
+      setStatus("Provide corrected text and select an existing DOCX first.");
+      flashButton(els.appendDocxBtn, "btn-warn", "Missing Input");
+      return;
+    }
+
+    const depsOK = await ensureDepsWithConsent();
+    if (!depsOK) return;
+
+    flashButton(els.appendDocxBtn, "btn-busy", "Appending...");
+    trainFromEditorIfNeeded();
+
+    const existingText = await extractTextFromDocx(existing);
+    const merged = existingText ? `${existingText}\n\n${edited}` : edited;
+    const blob = await makeDocxBlob(merged);
+
+    const base = existing.name.replace(/\.docx$/i, "");
+    triggerDownload(blob, `${base}_appended_${Date.now()}.docx`);
+    setStatus("Appended content and downloaded new DOCX.");
+    flashButton(els.appendDocxBtn, "btn-ok", "Saved");
+  }
+
+  function exportLearningPack() {
+    const pack = buildLearningPack();
+    const blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json;charset=utf-8" });
+    triggerDownload(blob, `punjabi_ocr_learning_pack_${Date.now()}.json`);
+    setStatus("Exported learning pack. Share this JSON with collaborators.");
+    flashButton(els.exportPackBtn, "btn-ok", "Exported");
+  }
+
+  async function importLearningPack() {
+    const file = els.importPackFile.files && els.importPackFile.files[0];
+    if (!file) {
+      setStatus("Choose a learning pack JSON file first.");
+      flashButton(els.importPackBtn, "btn-warn", "No File");
+      return;
+    }
+    try {
+      flashButton(els.importPackBtn, "btn-busy", "Importing...");
+      const txt = await file.text();
+      const parsed = JSON.parse(txt);
+      const stats = mergeLearningPackData(parsed);
+      setStatus(`Merged pack: corrections=${stats.corrections}, phrases=${stats.phrases}, vocabKeys=${stats.vocab}, templates=${stats.templates}, votes=${stats.votes}.`);
+      flashButton(els.importPackBtn, "btn-ok", "Merged");
+    } catch (err) {
+      setStatus(`Import failed: ${err.message}`);
+      flashButton(els.importPackBtn, "btn-warn", "Failed");
+    }
+  }
+
+  function renderFileList() {
+    const files = Array.from(els.sourceFiles.files || []);
+    els.fileList.innerHTML = files.map((f) => `<li>${escapeHtml(f.name)}</li>`).join("");
+    clearWorkspaceForNewRun();
+    setStatus(files.length ? "New file selection loaded. Click Start OCR." : "Idle");
+  }
+
+  els.sourceFiles.addEventListener("change", renderFileList);
+  els.outputText.addEventListener("input", refreshButtons);
+  els.existingDocx.addEventListener("change", refreshButtons);
+  els.reviewMode.addEventListener("change", () => {
+    buildReviewItems();
+    renderReviewItems();
+  });
+  els.reviewBody.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.classList.contains("review-input")) return;
+    const idx = Number(target.dataset.reviewIdx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= latestReviewItems.length) return;
+    latestReviewItems[idx].draft = target.value;
+    latestReviewItems[idx].corrected = target.value;
+    latestReviewItems[idx].decision = "corrected";
+    const stateEl = els.reviewBody.querySelector(`#review-state-${idx}`);
+    if (stateEl) stateEl.textContent = "Using your correction";
+  });
+  els.reviewBody.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    if (!target.classList.contains("review-suggest")) return;
+    const idx = Number(target.dataset.reviewIdx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= latestReviewItems.length) return;
+    const picked = String(target.value || "").trim();
+    if (!picked) return;
+    latestReviewItems[idx].draft = picked;
+    latestReviewItems[idx].corrected = picked;
+    latestReviewItems[idx].decision = "corrected";
+    const input = els.reviewBody.querySelector(`input.review-input[data-review-idx="${idx}"]`);
+    if (input) input.value = picked;
+    const stateEl = els.reviewBody.querySelector(`#review-state-${idx}`);
+    if (stateEl) stateEl.textContent = "Using your correction";
+  });
+  els.reviewBody.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const isAccept = target.classList.contains("review-accept-btn");
+    const isImplement = target.classList.contains("review-implement-btn");
+    if (!isAccept && !isImplement) return;
+    const idx = Number(target.dataset.reviewIdx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= latestReviewItems.length) return;
+    const item = latestReviewItems[idx];
+    const stateEl = els.reviewBody.querySelector(`#review-state-${idx}`);
+
+    if (isAccept) {
+      item.corrected = item.ocr;
+      item.draft = item.ocr;
+      item.decision = "accepted";
+      learnTemplateFromReviewItem(item);
+      const input = els.reviewBody.querySelector(`input.review-input[data-review-idx="${idx}"]`);
+      if (input) input.value = item.ocr;
+      if (stateEl) stateEl.textContent = "Using model output";
+      syncSingleReviewItemToEditor(idx);
+      flashButton(target, "btn-busy", "Accepting...");
+      window.setTimeout(() => {
+        flashButton(target, "btn-ok", "Accepted");
+      }, 220);
+      return;
+    }
+
+    item.corrected = item.draft;
+    item.decision = "corrected";
+    learnTemplateFromReviewItem(item);
+    learnPairImmediate(item.rawOcr || item.ocr, item.corrected);
+    if (stateEl) stateEl.textContent = "Using your correction";
+    syncSingleReviewItemToEditor(idx);
+    flashButton(target, "btn-busy", "Applying...");
+    window.setTimeout(() => {
+      flashButton(target, "btn-ok", "Applied");
+    }, 220);
+  });
+
+  els.runBtn.addEventListener("click", runOcrLoop);
+  els.stopBtn.addEventListener("click", () => {
+    if (!activeRun) return;
+    activeRun.cancelled = true;
+    setProgress("Stopping", 100, "Stopping OCR... please wait for current step to finish.");
+    setStatus("Stopping OCR... please wait for current step to finish.");
+  });
+  els.applyReviewBtn.addEventListener("click", applyReviewToPane);
+  els.trainReviewBtn.addEventListener("click", trainFromReviewItems);
+  els.trainPaneBtn.addEventListener("click", trainFromEditorIfNeeded);
+  els.saveNewDocxBtn.addEventListener("click", saveAsNewDocx);
+  els.saveTxtBtn.addEventListener("click", saveTxt);
+  els.appendDocxBtn.addEventListener("click", appendToExistingDocx);
+  els.exportPackBtn.addEventListener("click", exportLearningPack);
+  els.importPackBtn.addEventListener("click", importLearningPack);
+  if (els.fontDownBtn) els.fontDownBtn.addEventListener("click", () => stepEditorFont(-2));
+  if (els.fontUpBtn) els.fontUpBtn.addEventListener("click", () => stepEditorFont(2));
+
+  loadModel();
+  initEditorFontSize();
+  refreshButtons();
+  setProgress("Idle", 0, "Select files and click Start OCR.");
+  const templateCount = Object.values(model.templates || {}).reduce((n, arr) => n + (Array.isArray(arr) ? arr.length : 0), 0);
+  setStatus(`Ready. Learned rules=${Object.keys(model.corrections).length}, phrases=${Object.keys(model.phraseCorrections || {}).length}, vocab=${Object.keys(model.vocabCounts).length}, templates=${templateCount}`);
+})();
+</script>
+</body>
+</html>
